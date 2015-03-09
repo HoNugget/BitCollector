@@ -359,7 +359,7 @@ class WinPlatform():
 ## 3. log_to_file    - A boolean tracking whether or not to log to the log file.
 def frameworkCleanUp(log_file, logging_format, log_to_file):
 	while (threading.activeCount() > 1):
-		print (threading.activeCount())
+		time.sleep(1)
 	
 	## Only write the footer to the log file if file logging was enabled and the foprmat was HTML.
 	if (logging_format == "html" and log_to_file == 1):	
