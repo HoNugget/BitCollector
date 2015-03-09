@@ -7,12 +7,13 @@
 ##          module-independent tasks.
 
 ## Standard imports (Static)
-import json, logging, platform, os, re, sys, threading
+import json, logging, logging.handlers, platform
+import os, re, sys, threading, time
 
 ## Third-party imports (Static)
 
 ## Global Variable Declarations - CONSTANTS - DO NOT CHANGE @ RUNTIME
-_framework_version = "bitCollector_main v0.2.0 Released 2015-03-06"
+_framework_version = "bitCollector_main v0.2.1 Released 2015-03-09"
 
 ## Class Declarations
 
@@ -25,13 +26,13 @@ class InitializeBCModuleThread(threading.Thread):
 	## Purpose: Initializes a new thread and calls the main method of a BitCollector module.
 	##
 	## Parameters
-	## 1. runtime_settings - An instance of the RuntimeSettings class containing settings required to start the framework.
-	## 2. platform         - An instance of the Platform class containing the platform-independent attributes as well as a platform-dependent object.
-	## 3. module           - The name and parameters to pass to the BitCollector module to be initialized.
-	def __init__(self, runtime_settings, platform_details, module):
+	## 1. framework_settings - An instance of the FrameworkSettings class containing settings required to start the framework.
+	## 2. platform           - An instance of the Platform class containing the platform-independent attributes as well as a platform-dependent object.
+	## 3. module_dict        - The name and parameters to pass to the BitCollector module to be initialized.
+	def __init__(self, framework_settings, platform_details, module_dict):
 		## Initialize the Logger for this class.
 		self.logger = logging.getLogger(self.__class__.__name__)
-		self.logger.debug("Entering BitCollector.InitializeBCModuleThread.__init__():")
+		self.logger.debug("Entering BitCollector.InitializeBCModuleThread.__init__()")
 
 		## Initialize the absolute path to the running script for dynamic linking in the BitCollector modules.
 		self.path_to_main = os.path.dirname(os.path.realpath(__file__))
@@ -39,9 +40,9 @@ class InitializeBCModuleThread(threading.Thread):
 		## Initialize the parent thread object.
 		threading.Thread.__init__(self)
 		
-		self.runtime_settings = runtime_settings
-		self.platform_details = platform_details
-		self.module           = module
+		self.framework_settings = framework_settings
+		self.platform_details   = platform_details
+		self.module_dict        = module_dict
 		
 		self.start()
 
@@ -51,43 +52,45 @@ class InitializeBCModuleThread(threading.Thread):
 		self.thread_id = threading.current_thread()
 		
 		try:
-			entry_point = getattr(__import__(self.module["name"]), "main")
-			self.logger.info("Successfully imported BitCollector module: " + self.module["name"] + ".main")
+			entry_point = getattr(__import__(self.module_dict["name"]), "main")
+			self.logger.info("Successfully imported BitCollector module: " + self.module_dict["name"] + ".main")
 			
 			## Call the entry_point (main) method of the BitCollector module.
-			entry_point(self.thread_id, self.path_to_main, self.runtime_settings, self.platform_details, self.module)
+			entry_point(self.thread_id, self.path_to_main, self.framework_settings, self.platform_details, self.module_dict)
 
 		except AttributeError:
-			self.logger.warning("Failed to import BitCollector module: " + self.module["name"] + ".main")
+			self.logger.warning("Failed to import BitCollector module: " + self.module_dict["name"] + ".main")
 		
 		except ImportError:
-			self.logger.warning("Failed to import BitCollector module: " + self.module["name"] + ".main")
+			self.logger.warning("Failed to import BitCollector module: " + self.module_dict["name"] + ".main")
 		
-## Class Name: RuntimeSettings
+## Class Name: FrameworkSettings
 ##
 ## Purpose: Hold information about the settings required to run the framework.
-class RuntimeSettings():
+class FrameworkSettings():
 	## Method Name: __init__
 	##
 	## Purpose: Initialize the settings required to start the framework.
 	##
 	## Parameters
-	## 1. tuple - A 6-part tuple containing runtime settings.
+	## 1. tuple - A 7-part tuple containing runtime settings.
 	##    Index 0 - The path to the file to write the logs to.
-	##    Index 1 - The default log level which may be overridden by individual modules.
-	##    Index 2 - A boolean tracking whether or not to log to the log file.
-	##    Index 3 - A boolean tracking whether or not to log to STDOUT.
-	##    Index 4 - The list of strings containing additional module paths.
-	##    Index 5 - The list of module dictionaries containing module-specific settings.
+	##    Index 1 - The format to in which to save the log file (CSV or HTML)
+	##    Index 2 - The default log level which may be overridden by individual modules.
+	##    Index 3 - A boolean tracking whether or not to log to the log file.
+	##    Index 4 - A boolean tracking whether or not to log to STDOUT.
+	##    Index 5 - The list of strings containing additional module paths.
+	##    Index 6 - The list of module dictionaries containing module-specific settings.
 	def __init__(self, tuple):
 		## Initialize the Logger for this class.
 		## Store the runtime settings so that modules will have access to them.
 		self.log_file         = tuple[0]
-		self.logging_level    = tuple[1]
-		self.log_to_file      = tuple[2]
-		self.log_to_stdout    = tuple[3]
-		self.additional_paths = tuple[4]
-		self.module_list      = tuple[5]
+		self.logging_format   = tuple[1]
+		self.logging_level    = tuple[2]
+		self.log_to_file      = tuple[3]
+		self.log_to_stdout    = tuple[4]
+		self.additional_paths = tuple[5]
+		self.module_list      = tuple[6]
 
 		## Call the method to initialize the root logger.
 		self.initializeRootLogger()
@@ -97,8 +100,19 @@ class RuntimeSettings():
 	## Purpose: Initialize the root logger as well as the logging formats and logging streams for the log file and STDOUT.
 	def initializeRootLogger(self):	
 		## Initialize the logging formats to be used by all modules.
-		self.log_file_format    = logging.Formatter('%(asctime)s,%(module)s.%(name)s.%(funcName)s,%(levelname)s,%(message)s', '%Y-%m-%dT%H:%M:%S')		
-		self.log_console_format	= logging.Formatter('%(asctime)s - %(module)s.%(name)s.%(funcName)s - [%(levelname)s] - %(message)s', '%Y-%m-%d %H:%M:%S')		
+		print self.logging_format
+		if (self.logging_format == "csv"):
+			self.log_file_formatter = logging.Formatter('%(asctime)s,%(module)s.%(name)s.%(funcName)s,%(levelname)s,%(message)s', '%Y-%m-%dT%H:%M:%S')		
+		
+		elif (self.logging_format == "html"):
+			self.log_file_formatter = logging.Formatter("<tr><td>%(asctime)s</td><td>%(module)s.%(name)s.%(funcName)s</td><td>%(levelname)s</td><td>%(message)s</td></tr>", '%Y-%m-%dT%H:%M:%S')		
+		
+		else:
+			print "Startup - bitCollector_main.FrameworkSettings.initializeRootLogger - WARNING - Unknown logging format \"" + self.logging_format + "\" Defaulting to CSV."
+			self.logging_format  = "csv"
+			self.log_file_formatter = logging.Formatter('%(asctime)s,%(module)s.%(name)s.%(funcName)s,%(levelname)s,%(message)s', '%Y-%m-%dT%H:%M:%S')		
+			
+		self.log_console_formatter  = logging.Formatter('%(asctime)s - %(module)s.%(name)s.%(funcName)s - [%(levelname)s] - %(message)s', '%Y-%m-%d %H:%M:%S')		
 
 		## Create the root logging object and get the name of the current module. (root)
 		self.root_logger = logging.getLogger("")
@@ -120,26 +134,46 @@ class RuntimeSettings():
 			self.root_logger.setLevel(logging.CRITICAL)
 
 		else:
-			print "Startup - bitCollector_main.RuntimeSettings.initializeRootLogger - WARNING - Unknown logging level \"" + self.logging_level + "\" Defaulting to DEBUG."
+			print "Startup - bitCollector_main.FrameworkSettings.initializeRootLogger - WARNING - Unknown logging level \"" + self.logging_level + "\" Defaulting to DEBUG."
 			self.root_logger.setLevel(logging.DEBUG)
 
+		## Replace the time and date formatter in the supplied log file name if applicable.
+		self.log_file = re.sub(r'\$\(DATE\)', time.strftime("%Y-%m-%d", time.localtime()), self.log_file, count=1)
+		self.log_file = re.sub(r'\$\(TIME\)', time.strftime("%H-%M-%S", time.localtime()), self.log_file, count=1)
+		
 		## Create the log file logging stream and configure it.
-		try:
-			self.log_file_handler = logging.FileHandler(self.log_file, "w")
+		for log_count in range(1000):
+			try:
+				temp_file = self.log_file + "_" + str(log_count + 1) + "." + self.logging_format
+				if (os.path.isfile(temp_file) == 0):
+					self.log_file = temp_file
+					self.log_file_handler = logging.handlers.RotatingFileHandler(self.log_file, mode='a', maxBytes=1073741824, backupCount=99, encoding=None, delay=0)
+					break
+	
+			except IOError:
+				print "Startup - bitCollector_main.FrameworkSettings.initializeRootLogger - ERROR - Unable to open \"" + self.log_file + "\""
+				sys.exit()
 		
-		except IOError:
-			print "Startup - bitCollector_main.RuntimeSettings.initializeRootLogger - ERROR - Unable to open \"" + self.log_file + "\""
-			sys.exit()
-		
-		self.log_file_handler.setFormatter(self.log_file_format)
+		self.log_file_handler.setFormatter(self.log_file_formatter)
 		
 		## Only log to the file if specified.
 		if (self.log_to_file == 1):
+			if (self.logging_format == "html"):
+				## Write the table header to the log file.
+				temp_handler = open(self.log_file, 'a')
+				temp_handler.write("<table border=\"1\"  width=\"100%\"><tr><th>Date & Time</th><th>Traceback</th><th>Level</th><th>Message</th></tr>\n")
+				temp_handler.close()		
+			
+			else:
+				temp_handler = open(self.log_file, 'a')
+				temp_handler.write("Date & Time,Traceback,Level,Message\n")
+				temp_handler.close()						
+			
 			self.root_logger.addHandler(self.log_file_handler)
 
 		## Create the console logging stream and configure it.
 		self.log_console_handler = logging.StreamHandler(sys.stdout)
-		self.log_console_handler.setFormatter(self.log_console_format)
+		self.log_console_handler.setFormatter(self.log_console_formatter)
 		
 		## Only log to STDOUT if specified.
 		if (self.log_to_stdout == 1):
@@ -157,7 +191,7 @@ class ThreadManager():
 	def __init__(self):
 		## Initialize the Logger for this class.
 		self.logger = logging.getLogger(self.__class__.__name__)	
-		self.logger.debug("Entering BitCollector.ThreadManager.__init__():")
+		self.logger.debug("Entering BitCollector.ThreadManager.__init__()")
 	
 		self.thread_list = []
 		
@@ -190,12 +224,12 @@ class Platform():
 	def __init__(self, tuple):
 		## Initialize the Logger for this class.
 		self.logger = logging.getLogger(self.__class__.__name__)	
-		self.logger.debug("Entering BitCollector.Platform.__init__():")
+		self.logger.debug("Entering BitCollector.Platform.__init__()")
 	
 		## Replace unknown information ('') with "Unknown"
 		for each in tuple:
 			if (each == ""):
-				each = "Unknown"
+				each = "unknown"
 
 		## Initialize the platform-independent attributes.
 		self.system    = tuple[0]
@@ -205,18 +239,24 @@ class Platform():
 		self.machine   = tuple[4]
 		self.processor = tuple[5]
 
+		## Initialize the OS type attribute which will be populated below.
+		self.os_type   = "unknown"
+		
 		## Initialize the platform OS-dependent attribute objects.
 		## Mac OS
 		if (re.search(r'mac', self.system.lower())):
+			self.os_type = "mac"
 			self.mac_platform = MacPlatform(platform.mac_ver(release='', versioninfo=('', '', ''), machine=''))		
 		## Linux/Unix
 		elif (re.search(r'nix', self.system.lower())):
+			self.os_type = "nix"
 			self.nix_platform = NixPlatform(platform.linux_distribution(distname='', version='', id='', supported_dists=('SuSE', 'debian', 'redhat', 'mandrake'), full_distribution_name=1))
 		## Windows
 		elif (re.search(r'win', self.system.lower())):
+			self.os_type = "windows"
 			self.win_platform = WinPlatform(platform.win32_ver(release='', version='', csd='', ptype=''))
 		else:
-			self.logger.warning("Unknown system type.")
+			self.logger.warning("Unknown OS type. Unable to perform OS-dependent logic!")
 
 ## Class Name: MacPlatform
 ##
@@ -237,7 +277,7 @@ class MacPlatform():
 	def __init__(self, tuple):
 		## Initialize the Logger for this class.
 		self.logger = logging.getLogger(self.__class__.__name__)
-		self.logger.debug("Entering BitCollector.MacPlatform.__init__():")
+		self.logger.debug("Entering BitCollector.MacPlatform.__init__()")
 
 		## Replace unknown information ('') with "Unknown"
 		for each in tuple:
@@ -265,7 +305,7 @@ class NixPlatform():
 	def __init__(self, tuple):
 		## Initialize the Logger for this class.
 		self.logger = logging.getLogger(self.__class__.__name__)
-		self.logger.debug("Entering BitCollector.NixPlatform.__init__():")
+		self.logger.debug("Entering BitCollector.NixPlatform.__init__()")
 
 		## Replace unknown information ('') with "Unknown"
 		for each in tuple:
@@ -294,7 +334,7 @@ class WinPlatform():
 	def __init__(self, tuple):
 		## Initialize the Logger for this class.		
 		self.logger = logging.getLogger(self.__class__.__name__)
-		self.logger.debug("Entering BitCollector.WinPlatform.__init__():")
+		self.logger.debug("Entering BitCollector.WinPlatform.__init__()")
 		
 		## Replace unknown information ('') with "Unknown"
 		for each in tuple:
@@ -307,6 +347,26 @@ class WinPlatform():
 		self.csd     = tuple[2]
 		self.ptype   = tuple[3]
 		
+## Classless Method Declarations
+
+## Method Name: frameworkCleanUp
+##
+## Purpose: Wait for child threads to exit and perform Framework clean up
+##
+## Parameters
+## 1. log_file       - The name of the log file to write the logging footer to.
+## 2. logging_format - The format to in which to save the log file (CSV or HTML)
+## 3. log_to_file    - A boolean tracking whether or not to log to the log file.
+def frameworkCleanUp(log_file, logging_format, log_to_file):
+	while (threading.activeCount() > 1):
+		time.sleep(1)
+	
+	## Only write the footer to the log file if file logging was enabled and the foprmat was HTML.
+	if (logging_format == "html" and log_to_file == 1):	
+		log_file_handler = open(log_file, 'a')
+		log_file_handler.write("</table>")
+		log_file_handler.close()
+
 ## Method Name: importBCModules
 ##
 ## Purpose: Dynamically import the BitCollector modules specified in the configuration file.
@@ -316,7 +376,7 @@ class WinPlatform():
 ## 2. additional_paths - The list of additional module search paths.
 ## 3. module_list      - The list of modules stored as dictionaries.
 def importBCModules(main_logger, additional_paths, module_list):
-	main_logger.debug("Entering BitCollector.importBCModules():")
+	main_logger.debug("Entering BitCollector.importBCModules()")
 
 	## Add the additional search paths for BitCollector modules.
 	for each in additional_paths:
@@ -332,9 +392,8 @@ def importBCModules(main_logger, additional_paths, module_list):
 
 				except:
 					main_logger.warning("Unable to import module: " + str(module[key]))
-		
-## Classless Method Declarations
-		
+
+	
 ## Method Name: main
 ##
 ## Purpose: Serves as the entry point into the script.
@@ -343,8 +402,8 @@ def main():
 	config_path = parseCLA()
 	
 	## Parse the configuration file to determine runtime settings and to
-	## initialize the RuntimeSettings object to contain all of the settings required to run the modules.	
-	runtime_settings = RuntimeSettings(parseConfig(config_path))
+	## initialize the FrameworkSettings object to contain all of the settings required to run the modules.	
+	framework_settings = FrameworkSettings(parseConfig(config_path))
 	
 	## Create a logger for methods called by main().
 	main_logger = logging.getLogger("")
@@ -354,14 +413,17 @@ def main():
 	platform_details = Platform(platform.uname())
 	
 	## Dynamically import BitCollector modules specified in the configuration file.
-	importBCModules(main_logger, runtime_settings.additional_paths, runtime_settings.module_list)
+	importBCModules(main_logger, framework_settings.additional_paths, framework_settings.module_list)
 
 	## Loop through and call the main method within each of the dynamically loaded BitCollector modules.
-	for module in runtime_settings.module_list:
-		new_thread = InitializeBCModuleThread(runtime_settings, platform_details, module)
+	for module_dict in framework_settings.module_list:
+		new_thread = InitializeBCModuleThread(framework_settings, platform_details, module_dict)
 		
 		## Force the main thread to wait for the child thread before terminating.
 		new_thread.join()
+	
+	## Wait for child threads and perform clean up.
+	frameworkCleanUp(framework_settings.log_file, framework_settings.logging_format, framework_settings.log_to_file)
 	
 ## Method Name: parseCLA
 ##
@@ -446,6 +508,9 @@ def parseConfig(config_path):
 		if (key == "log_file"):
 			log_file = value
 
+		elif (key == "logging_format"):
+			logging_format = value
+		
 		elif (key == "logging_level"):
 			logging_level = value
 
@@ -479,7 +544,7 @@ def parseConfig(config_path):
 			print "Startup - bitCollector_main.root.parseConfig - WARNING - Unknown configuration attribute: " + key	
 
 	## Return the configuration file name and level as well as the list of modules as a tuple.
-	return log_file, logging_level, log_to_file, log_to_stdout, additional_paths, module_list
+	return log_file, logging_format, logging_level, log_to_file, log_to_stdout, additional_paths, module_list
 	
 ## This will prevent main() from running unless explicitly called.
 if (__name__ == "__main__"):

@@ -20,7 +20,8 @@
             "path": "../Modules"
         }
     ],
-    "log_file": "../../../logs/example.csv",
+    "log_file": "../../../logs/$(DATE)_$(TIME)_example",
+	"logging_format": "html",
     "logging_level": "debug",
     "log_to_file": 1,
     "log_to_stdout": 1
