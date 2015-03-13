@@ -12,7 +12,7 @@
 ##                    Make your code legible, though. :)
 
 ## Standard Imports
-import json, logging, os, sys
+import json, logging, os, sys, time
 
 ## Global Variable Declarations - CONSTANTS - DO NOT CHANGE @ RUNTIME
 _module_version = "Test1 Module v0.2.1 Released 2015-03-09"
@@ -92,17 +92,34 @@ class ModuleSettings():
 			
 		self.logger.debug("Successfully started Test1 logger!")
 		
-## Classless Method Declarations		
-## Method Name: main (Required)
+## Classless Method Declarations
+
+## Method Name: createTempFile
+##
+## Purpose: Creates a temporary file on the target machine.
+##          Meant to test the moduleCleanUp mehtod.
+##
+## Parameters
+## 1. root_logger - The logger from the main method.
+def createTempFile(root_logger):
+	root_logger.debug("Entering Test1.createTempFile()")
+
+	root_logger.info("Now you see me.")
+	temp_handle = open('temp.txt', 'w+')
+	temp_handle.write('Now you see me...')
+	temp_handle.close()
+	time.sleep(10.0)
+
+## Method Name: getHomeDirectory
 ##
 ## Purpose: Prints out the home directory of the signed in user.
 ##          Also serves an example method that with OS-dependent logic.
 ##
 ## Parameters
-## 1. main_logger - The logger from the main method.
+## 1. root_logger - The logger from the main method.
 ## 2. os_type     - The OS type of the target machine (mac, nix or windows)
-def getHomeDirectory(main_logger, os_type):
-	main_logger.debug("Entering Test1.getHomeDirectory()")
+def getHomeDirectory(root_logger, os_type):
+	root_logger.debug("Entering Test1.getHomeDirectory()")
 	
 	home_dir = "unknown"
 	
@@ -114,14 +131,14 @@ def getHomeDirectory(main_logger, os_type):
 			home_dir = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
 			
 		else:
-			main_logger.warning("Invalid OS type detected. Unable to determine home directory")
+			root_logger.warning("Invalid OS type detected. Unable to determine home directory")
 
 	else:
-		main_logger.warning("Unknown OS type detected. Unable to determine home directory.")
+		root_logger.warning("Unknown OS type detected. Unable to determine home directory.")
 	
-	main_logger.info("Home directory: " + home_dir)	
+	root_logger.info("Home directory: " + home_dir)	
 	return home_dir
-
+	
 ## Method Name: main (Required)
 ##
 ## Purpose: Serves as the entry point into the script.
@@ -147,11 +164,11 @@ def main(thread_id, path_to_main, framework_settings, platform_details, module_d
 	## Create a logger for methods called by main()
 	## Set it's logging level. (Optional)
 	## You only need to do this to override the root logging level from the framework.
-	main_logger = logging.getLogger("module_root")
-	main_logger.setLevel(module_settings.logging_level.upper())
-	main_logger.debug("Initialized main_logger")
+	root_logger = logging.getLogger("module_root")
+	root_logger.setLevel(module_settings.logging_level.upper())
+	root_logger.debug("Initialized main_logger")
 	
-	main_logger.info("Test1 module started successfully!")
+	root_logger.debug("Entering Test1.getHomeDirectory()")
 	
 	## Simple print statements showing data passed in from the framework.
 	print "Thread ID of " + sys.argv[0] + ":" + str(thread_id)
@@ -161,8 +178,29 @@ def main(thread_id, path_to_main, framework_settings, platform_details, module_d
 	
 	print "Operating System Type: " + platform_details.os_type
 	## Call the method to get the logged-in user's home directory.
-	print "Home directory: " + getHomeDirectory(main_logger, platform_details.os_type)
+	print "Home directory: " + getHomeDirectory(root_logger, platform_details.os_type)
 
-if (__name__ == "__main__"):
-	main(thread_id, path_to_main, runtime_settings, platform_details, module)
+	## Call the method to create a temp file.
+	createTempFile(root_logger)
+	
+	## Call the module cleanup method.
+	moduleCleanUp(root_logger)
+
+	## All is well, return 0 to the framework.
+	return 0
+
+## Method Name: moduleCleanUp
+##
+## Purpose: Remove traces of this module on the target machine.
+##
+## Parameters
+## 1. root_logger - The logger from the main method.
+def moduleCleanUp(root_logger):
+	root_logger.debug("Entering Test1.moduleCleanUp()")
+	
+	os.remove('temp.txt')
+	root_logger.info("Now you don't...")
+	
+	root_logger.info("Test1 module cleanup completed successfully.")
+	
 	

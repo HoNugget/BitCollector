@@ -56,7 +56,7 @@ class InitializeBCModuleThread(threading.Thread):
 			self.logger.info("Successfully imported BitCollector module: " + self.module_dict["name"] + ".main")
 			
 			## Call the entry_point (main) method of the BitCollector module.
-			entry_point(self.thread_id, self.path_to_main, self.framework_settings, self.platform_details, self.module_dict)
+			self.return_code = entry_point(self.thread_id, self.path_to_main, self.framework_settings, self.platform_details, self.module_dict)
 
 		except AttributeError:
 			self.logger.warning("Failed to import BitCollector module: " + self.module_dict["name"] + ".main")
@@ -360,7 +360,9 @@ class WinPlatform():
 ## 1. log_file       - The name of the log file to write the logging footer to.
 ## 2. logging_format - The format to in which to save the log file (CSV or HTML)
 ## 3. log_to_file    - A boolean tracking whether or not to log to the log file.
-def frameworkCleanUp(log_file, logging_format, log_to_file):
+def frameworkCleanUp(root_logger, log_file, logging_format, log_to_file):
+	root_logger.debug("Entering BitCollector.frameworkCleanUp()")	
+	
 	while (threading.activeCount() > 1):
 		time.sleep(1)
 	
@@ -375,11 +377,11 @@ def frameworkCleanUp(log_file, logging_format, log_to_file):
 ## Purpose: Dynamically import the BitCollector modules specified in the configuration file.
 ##
 ## Parameters
-## 1. main_logger      - The logger from the main method.
+## 1. root_logger      - The logger from the main method.
 ## 2. additional_paths - The list of additional module search paths.
 ## 3. module_list      - The list of modules stored as dictionaries.
-def importBCModules(main_logger, additional_paths, module_list):
-	main_logger.debug("Entering BitCollector.importBCModules()")
+def importBCModules(root_logger, additional_paths, module_list):
+	root_logger.debug("Entering BitCollector.importBCModules()")
 
 	## Add the additional search paths for BitCollector modules.
 	for each in additional_paths:
@@ -391,10 +393,10 @@ def importBCModules(main_logger, additional_paths, module_list):
 			if (key == "name"):
 				try:
 					__import__(module[key])
-					main_logger.info("Successfully imported module: " + str(module[key]))
+					root_logger.info("Successfully imported module: " + str(module[key]))
 
 				except:
-					main_logger.warning("Unable to import module: " + str(module[key]))
+					root_logger.warning("Unable to import module: " + str(module[key]))
 
 ## Method Name: main
 ##
@@ -408,14 +410,14 @@ def main():
 	framework_settings = FrameworkSettings(parseConfig(config_path))
 	
 	## Create a logger for methods called by main().
-	main_logger = logging.getLogger("")
-	main_logger.debug("Initialized main_logger")
+	root_logger = logging.getLogger("")
+	root_logger.debug("Initialized root_logger")
 
 	## Create a Platform instance to check the hardware and OS configuration.
 	platform_details = Platform(platform.uname())
 	
 	## Dynamically import BitCollector modules specified in the configuration file.
-	importBCModules(main_logger, framework_settings.additional_paths, framework_settings.module_list)
+	importBCModules(root_logger, framework_settings.additional_paths, framework_settings.module_list)
 
 	## Loop through and call the main method within each of the dynamically loaded BitCollector modules.
 	for module_dict in framework_settings.module_list:
@@ -425,7 +427,7 @@ def main():
 		new_thread.join()
 	
 	## Wait for child threads and perform clean up.
-	frameworkCleanUp(framework_settings.log_file, framework_settings.logging_format, framework_settings.log_to_file)
+	frameworkCleanUp(root_logger, framework_settings.log_file, framework_settings.logging_format, framework_settings.log_to_file)
 	
 ## Method Name: parseCLA
 ##
