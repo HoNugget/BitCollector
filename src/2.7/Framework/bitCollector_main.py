@@ -247,14 +247,17 @@ class Platform():
 		if (re.search(r'mac', self.system.lower())):
 			self.os_type = "mac"
 			self.mac_platform = MacPlatform(platform.mac_ver(release='', versioninfo=('', '', ''), machine=''))		
+		
 		## Linux/Unix
 		elif (re.search(r'nix', self.system.lower())):
 			self.os_type = "nix"
 			self.nix_platform = NixPlatform(platform.linux_distribution(distname='', version='', id='', supported_dists=('SuSE', 'debian', 'redhat', 'mandrake'), full_distribution_name=1))
+		
 		## Windows
 		elif (re.search(r'win', self.system.lower())):
 			self.os_type = "windows"
 			self.win_platform = WinPlatform(platform.win32_ver(release='', version='', csd='', ptype=''))
+		
 		else:
 			self.logger.warning("Unknown OS type. Unable to perform OS-dependent logic!")
 
@@ -393,7 +396,6 @@ def importBCModules(main_logger, additional_paths, module_list):
 				except:
 					main_logger.warning("Unable to import module: " + str(module[key]))
 
-	
 ## Method Name: main
 ##
 ## Purpose: Serves as the entry point into the script.

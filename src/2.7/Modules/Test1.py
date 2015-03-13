@@ -15,7 +15,7 @@
 import json, logging, os, sys
 
 ## Global Variable Declarations - CONSTANTS - DO NOT CHANGE @ RUNTIME
-_module_version = "Test1 Module: v0.2.1 Released 2015-03-09"
+_module_version = "Test1 Module v0.2.1 Released 2015-03-09"
 
 ## Class Declarations
 
