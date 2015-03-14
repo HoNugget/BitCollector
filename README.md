@@ -1,5 +1,5 @@
 # BitCollector
-An open-source tool for data extraction. Rivaling the best!
+An open-source framework of scripts for data extraction/triage rivaling the best! For more information, please check out our [wiki](https://github.com/TranscranialOrchestra/BitCollector/wiki).
 
 ## How to Contribute
 In order to contribute to our project, you will need to do the following:
