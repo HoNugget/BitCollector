@@ -10,3 +10,8 @@ In order to contribute to our project, you will need to do the following:
 4. Write your module being sure to include the requirements to properly integrate into the framework.
 5. Document and test your module.
 6. Create a pull request back to this repository.
+7. Issues are tracked in [TranscranialOrchestra/BitCollector-Issues](https://github.com/TranscranialOrchestra/BitCollector-Issues/issues)
+
+## HOW-TOs
+You can find HOW-TO instructions for Git and GitHub  in an FAQ format in our wiki.
+Wiki Page: https://github.com/TranscranialOrchestra/BitCollector/wiki/Git-&-GitHub-HOW-TOs
