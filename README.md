@@ -14,4 +14,5 @@ In order to contribute to our project, you will need to do the following:
 
 ## HOW-TOs
 You can find HOW-TO instructions for Git and GitHub  in an FAQ format in our wiki.
-Wiki Page: https://github.com/TranscranialOrchestra/BitCollector/wiki/Git-&-GitHub-HOW-TOs
+
+Wiki Page: [Git & GitHub-HOW-TOs](https://github.com/TranscranialOrchestra/BitCollector/wiki/Git-&-GitHub-HOW-TOs)
