@@ -1,4 +1,4 @@
-## File Name: bitCollector_main.py
+## File Name: bitCollector_framework.py
 ##
 ## Author(s): Daniel "Albinohat" Mercado
 ##
@@ -13,7 +13,7 @@ import os, re, sys, threading, time
 ## Third-party imports (Static)
 
 ## Global Variable Declarations - CONSTANTS - DO NOT CHANGE @ RUNTIME
-_framework_version = "bitCollector_main v0.2.1 Released 2015-03-09"
+_framework_version = "bitCollector_framework v0.2.1 Released 2015-03-09"
 
 ## Class Declarations
 
