@@ -110,7 +110,7 @@ class FrameworkSettings():
 			self.log_file_formatter = logging.Formatter("<tr><td>%(asctime)s</td><td>%(module)s.%(name)s.%(funcName)s</td><td>%(levelname)s</td><td>%(message)s</td></tr>", '%Y-%m-%dT%H:%M:%S')
 
 		else:
-			print "Startup - bitCollector_main.FrameworkSettings.initializeRootLogger - WARNING - Unknown logging format: " + self.logging_format + ". Defaulting to CSV."
+			print "Startup - bitCollector_framework.FrameworkSettings.initializeRootLogger - WARNING - Unknown logging format: " + self.logging_format + ". Defaulting to CSV."
 			self.logging_format  = "csv"
 			self.log_file_formatter = logging.Formatter('%(asctime)s,%(module)s.%(name)s.%(funcName)s,%(levelname)s,%(message)s', '%Y-%m-%dT%H:%M:%S')
 
@@ -136,7 +136,7 @@ class FrameworkSettings():
 			self.root_logger.setLevel(logging.CRITICAL)
 
 		else:
-			print "Startup - bitCollector_main.FrameworkSettings.initializeRootLogger - WARNING - Unknown logging level: " + self.logging_level + ". Defaulting to DEBUG."
+			print "Startup - bitCollector_framework.FrameworkSettings.initializeRootLogger - WARNING - Unknown logging level: " + self.logging_level + ". Defaulting to DEBUG."
 			self.root_logger.setLevel(logging.DEBUG)
 
 		## Replace the time and date formatter in the supplied log file name if applicable.
@@ -146,11 +146,8 @@ class FrameworkSettings():
 		## Verify that the log file directory exists.
 		if (os.path.isdir(self.abs_log_dir) == 0):
 			os.makedirs(self.abs_log_dir)
-			print "Startup - bitCollector_main.FrameworkSettings.initializeRootLogger - INFO - Log directory doesn't exists. Making."			
-			print "Startup - bitCollector_main.FrameworkSettings.initializeRootLogger - INFO - Created log directory: " + abs_log_dir
-
-		else:
-			print "Startup - bitCollector_main.FrameworkSettings.initializeRootLogger - INFO - Log directory already exists. Nothing to do."
+			print "Startup - bitCollector_framework.FrameworkSettings.initializeRootLogger - WARNING - Log directory doesn't exists. Making."			
+			print "Startup - bitCollector_framework.FrameworkSettings.initializeRootLogger - WARNING - Created log directory: " + abs_log_dir
 
 		## Create the log file logging stream and configure it.
 		for log_count in range(1000):
@@ -162,7 +159,7 @@ class FrameworkSettings():
 					break
 
 			except IOError:
-				print "Startup - bitCollector_main.FrameworkSettings.initializeRootLogger - ERROR - Unable to open: " + self.log_file + "."
+				print "Startup - bitCollector_framework.FrameworkSettings.initializeRootLogger - ERROR - Unable to open: " + self.log_file + "."
 				sys.exit()
 
 		self.log_file_handler.setFormatter(self.log_file_formatter)
@@ -506,36 +503,66 @@ def parseConfig(config_path):
 	additional_paths = []
 	module_list      = []
 
+	## Initialize booleans tracking if the required framework attributes are present.
+	module_list_present      = 0
+	additional_paths_present = 0
+	log_file_present         = 0
+	logging_format_present   = 0
+	logging_level_present    = 0
+	log_to_file_present      = 0
+	log_to_stdout_present    = 0
+
+	## Initialize booleans tracking whether the required module attributes are present.
+	name_present       = 0
+	parameters_present = 0
+	
+	## Initialize a boolean tracking whether or not to exit.
+	bool_exit = 0
+	
+	## Initialize a boolean tracking whether or not to break out of the module loop.
+	bool_break = 0
+
+	## Initialize lists to store missing required configuration entries.
+	missing_framework_config_entries = []
+	missing_module_config_entries    = []
+
 	## Open the configuration file for parsing.
 	try:
 		config_json = json.load(open(config_path))
 
 	except IOError:
-		print "Startup - bitCollector_main.root.parseConfig - ERROR - Unable to open: " + config_path + "."
+		print "Startup - bitCollector_framework.root.parseConfig - ERROR - Unable to open: " + config_path + "."
 		sys.exit()
 
 	except ValueError:
-		print "Startup - bitCollector_main.root.parseConfig - ERROR - The configuration file provided is not properly formatted JSON."
+		print "Startup - bitCollector_framework.root.parseConfig - ERROR - The configuration file provided is not properly formatted JSON."
 		sys.exit()
 
 	## Parse through each of the key value pairs of the entire JSON payload.
 	for key, value in config_json.iteritems():
 		if (key == "log_file"):
+			log_file_present = 1
 			log_file = value
 
 		elif (key == "logging_format"):
+			logging_format_present = 1
 			logging_format = value
 
 		elif (key == "logging_level"):
+			logging_level_present = 1
 			logging_level = value
 
 		elif (key == "log_to_file"):
+			log_to_file_present = 1
 			log_to_file = value
 
 		elif (key == "log_to_stdout"):
+			log_to_stdout_present = 1
 			log_to_stdout = value
 
 		elif (key == "additional_paths"):
+			additional_paths_present = 1
+			
 			## Loop through each of the paths in the list.
 			for path in config_json["additional_paths"]:
 				## Loop through the attributes of each module and update the dictionary with those attributes.
@@ -543,23 +570,92 @@ def parseConfig(config_path):
 					additional_paths.append(value)
 
 		elif (key == "module_list"):
+			module_list_present = 1
+		
 			## Loop through each of the modules in the list.
-			for module in config_json["module_list"]:
+			for module in config_json["module_list"]:				
 				## Initialize a blank dictionary to populate with the attributes of a module.
 				current_module = {}
+				
+				## Reset the values of the booleans tracking the presence of the name and parameters attributes as well as the break boolean.
+				name_present       = 0
+				parameters_present = 0
+				bool_break         = 0
 
 				## Loop through the attributes of each module and update the dictionary with those attributes.
 				for key, value in module.iteritems():
-					current_module.update({key: value})
+					if (key == "name"):
+						name_present = 1
+						current_module.update({key: value})
 
-				## Add the dictionary containing all the module settings to the list of modules.
-				module_list.append(current_module)
+					elif (key == "parameters"):
+						parameters_present = 1
+						current_module.update({key: value})
+
+					else:
+						print "Startup - bitCollector_framework.root.parseConfig - WARNING - Unknown module configuration attribute: " + key
+
+				if (name_present == 0):
+					missing_module_config_entries.append("name")
+					bool_break = 1
+
+				if (parameters_present == 0):
+					missing_module_config_entries.append("parameters")
+					bool_break = 1
+
+				## Break out of the loop if any of the required module attributes are missing.
+				if (bool_break == 1):
+					for entry in missing_module_config_entries:
+						print "Startup - bitCollector_framework.root.parseConfig - WARNING - Required module configuration entry missing: " + entry
+						
+					print "Module will not be imported. See documentation for more info."
+				
+				else:
+					## Add the dictionary containing all the module settings to the list of modules.
+					module_list.append(current_module)
 
 		else:
-			print "Startup - bitCollector_main.root.parseConfig - WARNING - Unknown configuration attribute: " + key
+			print "Startup - bitCollector_framework.root.parseConfig - WARNING - Unknown framework configuration attribute: " + key
 
-	## Return the configuration file name and level as well as the list of modules as a tuple.
-	return log_file, logging_format, logging_level, log_to_file, log_to_stdout, additional_paths, module_list
+	## If any of the required configuration entries are not present, exit.
+	if (module_list_present == 0):
+		bool_exit = 1
+		missing_framework_config_entries.append("module_list")
+
+	if (additional_paths_present == 0):
+		bool_exit = 1
+		missing_framework_config_entries.append("additional_paths")
+
+	if (log_file_present == 0):
+		bool_exit = 1
+		missing_framework_config_entries.append("log_file")
+
+	if (logging_format_present == 0):
+		bool_exit = 1
+		missing_framework_config_entries.append("logging_format")
+
+	if (logging_level_present == 0):
+		bool_exit = 1
+		missing_framework_config_entries.append("logging_level")
+
+	if (log_to_file_present == 0):
+		bool_exit = 1
+		missing_framework_config_entries.append("log_to_file")
+
+	if (log_to_stdout_present == 0):
+		bool_exit = 1
+		missing_framework_config_entries.append("log_to_stdout")
+	
+	if (bool_exit == 1):
+		for entry in missing_framework_config_entries:
+			print "Startup - bitCollector_framework.root.parseConfig - ERROR - Required framework configuration entry missing: " + entry
+		
+		print "Startup - bitCollector_framework.root.parseConfig - ERROR - See documentation for more info."
+		sys.exit()
+
+	else:
+		## Return the configuration file name and level as well as the list of modules as a tuple.
+		return log_file, logging_format, logging_level, log_to_file, log_to_stdout, additional_paths, module_list
 
 ## This will prevent main() from running unless explicitly called.
 if (__name__ == "__main__"):

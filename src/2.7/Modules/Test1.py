@@ -166,7 +166,7 @@ def main(thread_id, path_to_main, framework_settings, platform_details, module_d
 	## You only need to do this to override the root logging level from the framework.
 	root_logger = logging.getLogger("module_root")
 	root_logger.setLevel(module_settings.logging_level.upper())
-	root_logger.debug("Initialized main_logger")
+	root_logger.debug("Initialized module_root logger")
 
 	root_logger.debug("Entering Test1.getHomeDirectory()")
 
