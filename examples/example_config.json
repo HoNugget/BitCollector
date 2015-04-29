@@ -1,10 +1,13 @@
 {
     "module_list": [
         {
-            "name": "ChatHarvest",
+            "name": "Test1",
             "parameters": [
                 {
-                    "harvest_skype": true
+                    "par1": "Hello, world!"
+                },
+                {
+                    "par2": 42
                 },
 				{
 				    "logging_level": "debug"
