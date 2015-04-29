@@ -256,8 +256,13 @@ class Platform():
 			self.os_type = "mac"
 			self.mac_platform = MacPlatform(platform.mac_ver(release='', versioninfo=('', '', ''), machine=''))
 
-		## Linux/Unix
+		## Unix
 		elif (re.search(r'nix', self.system.lower())):
+			self.os_type = "nix"
+			self.nix_platform = NixPlatform(platform.linux_distribution(distname='', version='', id='', supported_dists=('SuSE', 'debian', 'redhat', 'mandrake'), full_distribution_name=1))
+
+		## Linux
+		elif (re.search(r'nux', self.system.lower())):
 			self.os_type = "nix"
 			self.nix_platform = NixPlatform(platform.linux_distribution(distname='', version='', id='', supported_dists=('SuSE', 'debian', 'redhat', 'mandrake'), full_distribution_name=1))
 
